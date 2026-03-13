@@ -86,7 +86,7 @@ export default function App() {
   const regularCharmsInCart = charms.filter((c) => !c.specialInstructions);
 
   const buildWhatsAppMessage = () => {
-    let msg = "¡Hola! Quiero hacer un pedido de *Jugo de Naranja* 🍊\n\n";
+    let msg = "¡Hola! Quiero hacer un pedido de *Jugo de Naranja* :)\n\n";
     if (bases.length > 0) {
       msg += `*Bases:*\n`;
       bases.forEach((b) => {
@@ -108,7 +108,7 @@ export default function App() {
       });
     }
 
-    msg += `\n*Total: $${total.toFixed(2)}*\n\nEntrega en ITESO 📍\n\n_Nota: Entiendo que la disponibilidad de los charms puede variar. ¿Me confirmas tu stock?_`;
+    msg += `\n*Total: $${total.toFixed(2)}*\n\n\n\n_Nota: Entiendo que la disponibilidad de los charms puede variar. ¿Me confirmas la disponibilidad?`;
     return encodeURIComponent(msg);
   };
 
