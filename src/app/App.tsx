@@ -6,13 +6,13 @@ import { useCartStore } from "../store/useCartStore";
 
 export default function App() {
   const { products, loading, error } = useCatalog();
-  const { baseBracelet, charms, setBaseBracelet, removeBaseBracelet, addCharm, removeCharm, updateCharmQuantity, getTotal } = useCartStore();
+  const { bases, charms, addBase, removeBase, updateBaseQuantity, addCharm, removeCharm, updateCharmQuantity, getTotal } = useCartStore();
 
   const [letterInput, setLetterInput] = useState("");
   const [cartOpen, setCartOpen] = useState(false);
 
   // Divide products into categories
-  const bases = products.filter((p) => p.category === "BASE");
+  const catalogBases = products.filter((p) => p.category === "BASE");
   const regularCharms = products.filter((p) => p.category === "CHARM_REGULAR" || p.category === "CHARM_SPECIAL");
 
   // Find a product that acts as the "Letter Charm". We assume its name contains "Letra"
@@ -21,7 +21,28 @@ export default function App() {
   const gridCharms = regularCharms.filter(p => p.id !== letterCharmProduct?.id);
 
   const total = getTotal();
-  const totalItems = (baseBracelet ? 1 : 0) + charms.reduce((acc, c) => acc + c.quantity, 0);
+  const totalItems = bases.reduce((acc, b) => acc + b.quantity, 0) + charms.reduce((acc, c) => acc + c.quantity, 0);
+
+  const getBaseCount = (baseId: string) => {
+    const existing = bases.find((b) => b.product.id === baseId);
+    return existing ? existing.quantity : 0;
+  };
+
+  const handleBaseAdd = (baseId: string) => {
+    const product = products.find((p) => p.id === baseId);
+    if (!product) return;
+    const existing = bases.find((b) => b.product.id === baseId);
+    if (existing) updateBaseQuantity(existing.id, existing.quantity + 1);
+    else addBase(product);
+  };
+
+  const handleBaseRemove = (baseId: string) => {
+    const existing = bases.find((b) => b.product.id === baseId);
+    if (existing) {
+      if (existing.quantity > 1) updateBaseQuantity(existing.id, existing.quantity - 1);
+      else removeBase(existing.id);
+    }
+  };
 
   const handleCharmAdd = (charmId: string) => {
     const product = products.find((p) => p.id === charmId);
@@ -66,7 +87,12 @@ export default function App() {
 
   const buildWhatsAppMessage = () => {
     let msg = "¡Hola! Quiero hacer un pedido de *Jugo de Naranja* 🍊\n\n";
-    if (baseBracelet) msg += `*Base:* ${baseBracelet.product.name} - $${baseBracelet.product.price}\n`;
+    if (bases.length > 0) {
+      msg += `*Bases:*\n`;
+      bases.forEach((b) => {
+        msg += `• ${b.product.name} x${b.quantity} - $${(b.product.price * b.quantity).toFixed(2)}\n`;
+      });
+    }
 
     if (regularCharmsInCart.length > 0) {
       msg += `\n*Charms:*\n`;
@@ -87,8 +113,8 @@ export default function App() {
   };
 
   const handleWhatsApp = () => {
-    // In production, this would be the vendor's actual number
-    const phone = "523312345678";
+    // Vendor's actual number
+    const phone = "5213951230054";
     window.open(`https://wa.me/${phone}?text=${buildWhatsAppMessage()}`, "_blank");
   };
 
@@ -182,8 +208,9 @@ export default function App() {
           Selecciona la base de tu pulsera
         </p>
         <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-          {bases.map((base) => {
-            const isSelected = baseBracelet?.product.id === base.id;
+          {catalogBases.map((base) => {
+            const count = getBaseCount(base.id);
+            const isSelected = count > 0;
             return (
               <div
                 key={base.id}
@@ -214,21 +241,40 @@ export default function App() {
                   <p className="text-xs mb-3" style={{ color: isSelected ? "#C8B888" : "#8B6914" }}>
                     ${base.price.toFixed(2)}
                   </p>
-                  <button
-                    disabled={!base.available}
-                    onClick={() => {
-                      if (isSelected) removeBaseBracelet();
-                      else setBaseBracelet(base);
-                    }}
-                    className="w-full py-2 rounded-full text-xs transition-all flex items-center justify-center gap-1.5"
-                    style={{
-                      backgroundColor: isSelected ? "#F5F5DC" : "#2C2C2C",
-                      color: isSelected ? "#2C2C2C" : "#F5F5DC",
-                    }}
-                  >
-                    {isSelected && <Check size={12} strokeWidth={2.5} />}
-                    {!base.available ? "Agotado" : isSelected ? "Seleccionado" : "Seleccionar"}
-                  </button>
+
+                  <div className="mt-1.5 flex items-center justify-between">
+                    {!base.available ? (
+                      <span className="text-[10px] w-full text-center py-1.5 rounded bg-[#D0CCBA] text-[#7A7060]">Agotado</span>
+                    ) : count === 0 ? (
+                      <button
+                        onClick={() => handleBaseAdd(base.id)}
+                        className="w-full flex items-center justify-center h-8 rounded-full transition-opacity hover:opacity-80"
+                        style={{ backgroundColor: "#2C2C2C", color: "#F5F5DC" }}
+                      >
+                        <span className="text-xs">Agregar</span>
+                      </button>
+                    ) : (
+                      <div className="w-full flex items-center justify-between">
+                        <button
+                          onClick={() => handleBaseRemove(base.id)}
+                          className="flex items-center justify-center w-8 h-8 rounded-full transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: "#D0CCBA" }}
+                        >
+                          <Minus size={14} strokeWidth={2} style={{ color: "#2C2C2C" }} />
+                        </button>
+                        <span className="text-sm font-medium" style={{ color: "#F5F5DC" }}>
+                          {count}
+                        </span>
+                        <button
+                          onClick={() => handleBaseAdd(base.id)}
+                          className="flex items-center justify-center w-8 h-8 rounded-full transition-opacity hover:opacity-80"
+                          style={{ backgroundColor: "#D0CCBA" }}
+                        >
+                          <Plus size={14} strokeWidth={2} style={{ color: "#2C2C2C" }} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -396,12 +442,12 @@ export default function App() {
             Tu pedido
           </p>
           <div className="space-y-1.5">
-            {baseBracelet && (
-              <div className="flex justify-between text-xs" style={{ color: "#2C2C2C" }}>
-                <span>{baseBracelet.product.name}</span>
-                <span>${baseBracelet.product.price.toFixed(2)}</span>
+            {bases.map((b) => (
+              <div key={b.id} className="flex justify-between text-xs" style={{ color: "#2C2C2C" }}>
+                <span>{b.product.name} × {b.quantity}</span>
+                <span>${(b.product.price * b.quantity).toFixed(2)}</span>
               </div>
-            )}
+            ))}
             {regularCharmsInCart.map((c) => (
               <div key={c.id} className="flex justify-between text-xs" style={{ color: "#2C2C2C" }}>
                 <span>

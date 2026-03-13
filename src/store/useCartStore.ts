@@ -2,11 +2,12 @@ import { create } from 'zustand';
 import { CartItem, Product } from '../types';
 
 interface CartState {
-    baseBracelet: CartItem | null;
+    bases: CartItem[];
     charms: CartItem[];
 
-    setBaseBracelet: (bracelet: Product) => void;
-    removeBaseBracelet: () => void;
+    addBase: (bracelet: Product) => void;
+    removeBase: (cartItemId: string) => void;
+    updateBaseQuantity: (cartItemId: string, quantity: number) => void;
 
     addCharm: (charm: Product, specialInstructions?: string) => void;
     removeCharm: (cartItemId: string) => void;
@@ -18,13 +19,28 @@ interface CartState {
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
-    baseBracelet: null,
+    bases: [],
     charms: [],
 
-    setBaseBracelet: (bracelet) =>
-        set({ baseBracelet: { id: `base-${Date.now()}`, product: bracelet, quantity: 1 } }),
+    addBase: (bracelet) =>
+        set((state) => ({
+            bases: [
+                ...state.bases,
+                { id: `base-${Date.now()}-${Math.random().toString(36).substring(7)}`, product: bracelet, quantity: 1 }
+            ]
+        })),
 
-    removeBaseBracelet: () => set({ baseBracelet: null }),
+    removeBase: (cartItemId) =>
+        set((state) => ({
+            bases: state.bases.filter((item) => item.id !== cartItemId)
+        })),
+
+    updateBaseQuantity: (cartItemId, quantity) =>
+        set((state) => ({
+            bases: state.bases.map((item) =>
+                item.id === cartItemId ? { ...item, quantity: Math.max(1, quantity) } : item
+            )
+        })),
 
     addCharm: (charm, specialInstructions) =>
         set((state) => ({
@@ -59,16 +75,16 @@ export const useCartStore = create<CartState>((set, get) => ({
         })),
 
     getTotal: () => {
-        const { baseBracelet, charms } = get();
+        const { bases, charms } = get();
         let total = 0;
-        if (baseBracelet) {
-            total += baseBracelet.product.price * baseBracelet.quantity;
-        }
+        bases.forEach(base => {
+            total += base.product.price * base.quantity;
+        });
         charms.forEach(charm => {
             total += charm.product.price * charm.quantity;
         });
         return total;
     },
 
-    clearCart: () => set({ baseBracelet: null, charms: [] })
+    clearCart: () => set({ bases: [], charms: [] })
 }));
